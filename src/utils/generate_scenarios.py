@@ -77,4 +77,4 @@ if __name__ == "__main__":
                 func_src = ast.get_source_segment(source, node)
                 functions.append({"func_name": node.name, "func_source": func_src})
             
-        return functions"""))
+        return functions""")['positive'])
