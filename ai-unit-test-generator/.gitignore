@@ -1,0 +1,13 @@
+out/
+node_modules/
+.vscode-test/
+*.vsix
+
+# Python
+python/__pycache__/
+python/.venv/
+python/*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
