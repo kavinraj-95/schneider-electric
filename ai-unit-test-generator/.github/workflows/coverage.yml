@@ -1,0 +1,82 @@
+name: Code Coverage
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: ai-unit-test-generator/package-lock.json
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Install Node dependencies
+      working-directory: ./ai-unit-test-generator
+      run: npm ci
+
+    - name: Install Python dependencies
+      working-directory: ./ai-unit-test-generator/python
+      run: |
+        uv pip install --system -r requirements.txt
+
+    - name: Run TypeScript tests with coverage
+      working-directory: ./ai-unit-test-generator
+      run: npm run test:coverage
+
+    - name: Run Python tests with coverage
+      working-directory: ./ai-unit-test-generator/python
+      run: uv run pytest --cov=. --cov-report=xml --cov-report=term
+
+    - name: Upload TypeScript coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./ai-unit-test-generator/coverage/lcov.info
+        flags: typescript
+        name: typescript-coverage
+        fail_ci_if_error: false
+
+    - name: Upload Python coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./ai-unit-test-generator/python/coverage.xml
+        flags: python
+        name: python-coverage
+        fail_ci_if_error: false
+
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: romeovs/lcov-reporter-action@v0.3.1
+      with:
+        lcov-file: ./ai-unit-test-generator/coverage/lcov.info
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Archive coverage reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-reports
+        path: |
+          ai-unit-test-generator/coverage/
+          ai-unit-test-generator/python/htmlcov/
+          ai-unit-test-generator/python/coverage.xml
+        retention-days: 30

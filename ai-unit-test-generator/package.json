@@ -69,6 +69,16 @@
       {
         "command": "aiUnitTesting.toggleFunctionSelection",
         "title": "Toggle Function Selection"
+      },
+      {
+        "command": "aiUnitTesting.runCoverage",
+        "title": "Run Code Coverage",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "aiUnitTesting.showCoverage",
+        "title": "Show Coverage Report",
+        "icon": "$(graph)"
       }
     ],
     "menus": {
@@ -86,6 +96,11 @@
         {
           "command": "aiUnitTesting.clearSelection",
           "when": "view == aiUnitTesting.functions",
+          "group": "navigation"
+        },
+        {
+          "command": "aiUnitTesting.runCoverage",
+          "when": "view == aiUnitTesting.sidebar",
           "group": "navigation"
         }
       ]
@@ -121,14 +136,51 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "coverage": "npm run test:coverage; npm run coverage:python",
+    "coverage:python": "cd python && uv run pytest --cov=. --cov-report=json --cov-report=term",
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
     "typescript": "^5.3.0"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/src"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.test.ts"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!src/**/*.d.ts",
+      "!src/**/__tests__/**"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "json",
+      "lcov",
+      "text",
+      "html"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 50,
+        "functions": 50,
+        "lines": 50,
+        "statements": 50
+      }
+    }
   }
 }

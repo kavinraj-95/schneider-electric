@@ -50,6 +50,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 case 'getStatus':
                     this.sendStats();
                     break;
+                case 'runCoverage':
+                    await vscode.commands.executeCommand('aiUnitTesting.runCoverage');
+                    break;
             }
         });
 
@@ -115,7 +118,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         <div class="section">
             <div class="section-title">Ollama Status</div>
             <div id="ollamaStatus" class="ollama-status disconnected">
-                <span id="ollamaIcon">$(circle-slash)</span>
+                <span id="ollamaIcon">⊘</span>
                 <span id="ollamaText">Checking...</span>
             </div>
         </div>
@@ -151,16 +154,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             <div class="section-title">Actions</div>
             <div class="button-group">
                 <button id="extractBtn" class="primary">
-                    <span>$(symbol-function)</span>
+                    <span>ƒₓ</span>
                     Extract Functions
                 </button>
                 <button id="generateBtn" class="primary">
-                    <span>$(beaker)</span>
+                    <span>⚗</span>
                     Generate Tests
                 </button>
                 <button id="clearBtn" class="secondary">
-                    <span>$(clear-all)</span>
+                    <span>✕</span>
                     Clear Selection
+                </button>
+                <button id="coverageBtn" class="secondary">
+                    <span>📊</span>
+                    Run Coverage
                 </button>
             </div>
         </div>
@@ -192,6 +199,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             extractBtn: document.getElementById('extractBtn'),
             generateBtn: document.getElementById('generateBtn'),
             clearBtn: document.getElementById('clearBtn'),
+            coverageBtn: document.getElementById('coverageBtn'),
             errorSection: document.getElementById('errorSection'),
             errorMessage: document.getElementById('errorMessage')
         };
@@ -207,6 +215,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         elements.clearBtn.addEventListener('click', () => {
             vscode.postMessage({ type: 'clear' });
+        });
+
+        elements.coverageBtn.addEventListener('click', () => {
+            vscode.postMessage({ type: 'runCoverage' });
         });
 
         // Message handler
@@ -232,9 +244,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         function updateOllamaStatus(health) {
             if (health.status === 'ok') {
                 elements.ollamaStatus.className = 'ollama-status connected';
+                elements.ollamaIcon.textContent = '✓';
                 elements.ollamaText.textContent = 'Connected (' + (health.models?.length || 0) + ' models)';
             } else {
                 elements.ollamaStatus.className = 'ollama-status disconnected';
+                elements.ollamaIcon.textContent = '⊘';
                 elements.ollamaText.textContent = health.error || 'Disconnected';
             }
         }

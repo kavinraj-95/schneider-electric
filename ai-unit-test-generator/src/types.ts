@@ -78,7 +78,7 @@ export interface ExtensionConfig {
 }
 
 export interface WebviewMessage {
-    type: 'generate' | 'extract' | 'clear' | 'checkOllama' | 'getStatus';
+    type: 'generate' | 'extract' | 'clear' | 'checkOllama' | 'getStatus' | 'runCoverage';
     payload?: unknown;
 }
 

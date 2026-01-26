@@ -6,6 +6,7 @@ import { Pipeline } from './pipeline/Pipeline';
 import { PythonBridge } from './services/PythonBridge';
 import { OllamaService } from './services/OllamaService';
 import { ConfigService } from './services/ConfigService';
+import { CoverageService } from './services/CoverageService';
 import { Logger } from './utils/logger';
 
 let outputChannel: vscode.OutputChannel;
@@ -26,6 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
     const pythonBridge = new PythonBridge(context.extensionPath, configService);
     const ollamaService = new OllamaService(configService);
     const pipeline = new Pipeline(pythonBridge, ollamaService, configService);
+    const coverageService = new CoverageService(context.extensionPath);
 
     const fileTreeProvider = new FileTreeProvider();
     const functionTreeProvider = new FunctionTreeProvider();
@@ -134,6 +136,42 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.commands.executeCommand('workbench.view.extension.aiUnitTesting');
         })
     );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('aiUnitTesting.runCoverage', async () => {
+            Logger.log('Running code coverage...');
+            statusBarItem.text = '$(sync~spin) Running Coverage...';
+            statusBarItem.show();
+
+            try {
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'Running code coverage',
+                    cancellable: false
+                }, async (progress) => {
+                    progress.report({ increment: 0, message: 'Running TypeScript tests...' });
+                    await coverageService.runCoverage();
+                    progress.report({ increment: 100, message: 'Complete!' });
+                });
+
+                vscode.window.showInformationMessage('Code coverage completed!');
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Unknown error';
+                Logger.error(`Coverage failed: ${message}`);
+                vscode.window.showErrorMessage(`Coverage failed: ${message}`);
+            } finally {
+                statusBarItem.text = '$(beaker) AI Tests';
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('aiUnitTesting.showCoverage', () => {
+            coverageService.showCoverageReport();
+        })
+    );
+
+    context.subscriptions.push(coverageService);
 
     pipeline.on('stateChange', (status) => {
         sidebarProvider.updateStatus(status);

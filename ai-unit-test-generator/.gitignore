@@ -3,10 +3,19 @@ node_modules/
 .vscode-test/
 *.vsix
 
+# Coverage
+coverage/
+.nyc_output/
+*.lcov
+
 # Python
 python/__pycache__/
 python/.venv/
 python/*.pyc
+python/.pytest_cache/
+python/htmlcov/
+python/coverage.json
+python/.coverage
 
 # OS files
 .DS_Store
