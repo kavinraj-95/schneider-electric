@@ -8,11 +8,37 @@ export class ConfigService {
         const config = vscode.workspace.getConfiguration(ConfigService.CONFIG_SECTION);
 
         return {
+            llmProvider: config.get<'openai' | 'ollama'>('llmProvider', 'openai'),
+            openaiApiKey: config.get<string>('openaiApiKey', ''),
+            openaiModel: config.get<string>('openaiModel', 'gpt-4o'),
+            openaiOrganization: config.get<string>('openaiOrganization', ''),
             ollamaEndpoint: config.get<string>('ollamaEndpoint', 'http://localhost:11434'),
             ollamaModel: config.get<string>('ollamaModel', 'llama3.2'),
             testOutputDir: config.get<string>('testOutputDir', 'tests'),
             pythonPath: config.get<string>('pythonPath', 'python3')
         };
+    }
+
+    getLLMProvider(): 'openai' | 'ollama' {
+        return this.getConfig().llmProvider;
+    }
+
+    getOpenAIApiKey(): string {
+        // Check environment variable first, then config
+        const envKey = process.env.OPENAI_API_KEY;
+        if (envKey) {
+            return envKey;
+        }
+        return this.getConfig().openaiApiKey;
+    }
+
+    getOpenAIModel(): string {
+        return this.getConfig().openaiModel;
+    }
+
+    getOpenAIOrganization(): string | undefined {
+        const org = this.getConfig().openaiOrganization;
+        return org ? org : undefined;
     }
 
     getOllamaEndpoint(): string {

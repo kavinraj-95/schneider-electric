@@ -208,3 +208,61 @@ button:disabled {
     color: var(--vscode-descriptionForeground);
     text-transform: uppercase;
 }
+
+.llm-settings {
+    background-color: var(--vscode-editor-background);
+    padding: 12px;
+    border-radius: var(--border-radius);
+}
+
+.setting-group {
+    margin-bottom: 12px;
+}
+
+.setting-group label {
+    display: block;
+    font-size: 11px;
+    margin-bottom: 6px;
+    color: var(--vscode-foreground);
+    font-weight: 500;
+}
+
+.select-input {
+    width: 100%;
+    padding: 6px 8px;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.select-input:hover {
+    border-color: var(--vscode-inputOption-activeBorder);
+}
+
+.select-input:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+}
+
+.llm-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    margin-top: 12px;
+}
+
+.llm-status.connected {
+    border-left: 3px solid var(--vscode-charts-green);
+}
+
+.llm-status.disconnected {
+    border-left: 3px solid var(--vscode-charts-red);
+}

@@ -1,7 +1,7 @@
 {
   "name": "ai-unit-test-generator",
   "displayName": "AI Unit Test Generator",
-  "description": "AI-powered unit test generation using Ollama llama3.2",
+  "description": "AI-powered unit test generation using OpenAI GPT-4o or Ollama with automatic test scenario generation and pytest code creation",
   "version": "0.0.1",
   "publisher": "schneider-electric",
   "engines": {
@@ -79,6 +79,16 @@
         "command": "aiUnitTesting.showCoverage",
         "title": "Show Coverage Report",
         "icon": "$(graph)"
+      },
+      {
+        "command": "aiUnitTesting.showSetupWizard",
+        "title": "Setup Wizard",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "aiUnitTesting.showHelp",
+        "title": "Show Help",
+        "icon": "$(question)"
       }
     ],
     "menus": {
@@ -108,15 +118,37 @@
     "configuration": {
       "title": "AI Unit Testing",
       "properties": {
+        "aiUnitTesting.llmProvider": {
+          "type": "string",
+          "enum": ["openai", "ollama"],
+          "default": "openai",
+          "description": "LLM provider to use (OpenAI recommended)"
+        },
+        "aiUnitTesting.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API key (recommended: use OPENAI_API_KEY environment variable)"
+        },
+        "aiUnitTesting.openaiModel": {
+          "type": "string",
+          "enum": ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+          "default": "gpt-4o",
+          "description": "OpenAI model to use"
+        },
+        "aiUnitTesting.openaiOrganization": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI organization ID (optional)"
+        },
         "aiUnitTesting.ollamaEndpoint": {
           "type": "string",
           "default": "http://localhost:11434",
-          "description": "Ollama server URL"
+          "description": "Ollama server URL (only used if llmProvider is 'ollama')"
         },
         "aiUnitTesting.ollamaModel": {
           "type": "string",
           "default": "llama3.2",
-          "description": "Ollama model name"
+          "description": "Ollama model name (only used if llmProvider is 'ollama')"
         },
         "aiUnitTesting.testOutputDir": {
           "type": "string",

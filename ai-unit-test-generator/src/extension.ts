@@ -1,11 +1,14 @@
 import * as vscode from 'vscode';
 import { SidebarProvider } from './providers/SidebarProvider';
+import { SetupWizardProvider } from './providers/SetupWizardProvider';
+import { HelpProvider } from './providers/HelpProvider';
 import { FileTreeProvider } from './providers/FileTreeProvider';
 import { FunctionTreeProvider } from './providers/FunctionTreeProvider';
 import { Pipeline } from './pipeline/Pipeline';
 import { PythonBridge } from './services/PythonBridge';
-import { OllamaService } from './services/OllamaService';
+import { LLMService } from './services/LLMService';
 import { ConfigService } from './services/ConfigService';
+import { EnvironmentService } from './services/EnvironmentService';
 import { CoverageService } from './services/CoverageService';
 import { Logger } from './utils/logger';
 
@@ -21,12 +24,14 @@ export function activate(context: vscode.ExtensionContext) {
     statusBarItem.text = '$(beaker) AI Tests';
     statusBarItem.tooltip = 'AI Unit Test Generator';
     statusBarItem.command = 'aiUnitTesting.showSidebar';
+    statusBarItem.show();
     context.subscriptions.push(statusBarItem);
 
     const configService = new ConfigService();
     const pythonBridge = new PythonBridge(context.extensionPath, configService);
-    const ollamaService = new OllamaService(configService);
-    const pipeline = new Pipeline(pythonBridge, ollamaService, configService);
+    const llmService = new LLMService(configService);
+    const environmentService = new EnvironmentService(configService);
+    const pipeline = new Pipeline(pythonBridge, llmService, configService);
     const coverageService = new CoverageService(context.extensionPath);
 
     const fileTreeProvider = new FileTreeProvider();
@@ -34,7 +39,8 @@ export function activate(context: vscode.ExtensionContext) {
     const sidebarProvider = new SidebarProvider(
         context.extensionUri,
         pipeline,
-        ollamaService,
+        llmService,
+        configService,
         fileTreeProvider,
         functionTreeProvider
     );
@@ -172,6 +178,58 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(coverageService);
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('aiUnitTesting.showSetupWizard', async () => {
+            Logger.log('Opening setup wizard');
+            const wizard = new SetupWizardProvider(
+                context,
+                configService,
+                llmService,
+                environmentService
+            );
+            await wizard.show();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('aiUnitTesting.showHelp', async () => {
+            Logger.log('Opening help documentation');
+            await HelpProvider.show();
+        })
+    );
+
+    // Show setup wizard on first run
+    const isFirstRun = !context.globalState.get('setupWizardCompleted', false);
+    if (isFirstRun) {
+        // Show welcome message with options
+        vscode.window.showInformationMessage(
+            '👋 Welcome to AI Unit Test Generator!',
+            'Setup Now',
+            'Configure Later'
+        ).then((choice) => {
+            if (choice === 'Setup Now') {
+                vscode.commands.executeCommand('aiUnitTesting.showSetupWizard');
+            }
+        });
+
+        // Also try to auto-show wizard after a delay as backup
+        setTimeout(async () => {
+            try {
+                const wizard = new SetupWizardProvider(
+                    context,
+                    configService,
+                    llmService,
+                    environmentService
+                );
+                await wizard.show();
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Unknown error';
+                Logger.error(`Setup wizard error: ${message}`);
+                vscode.window.showErrorMessage(`Setup wizard error: ${message}`);
+            }
+        }, 500);
+    }
 
     pipeline.on('stateChange', (status) => {
         sidebarProvider.updateStatus(status);

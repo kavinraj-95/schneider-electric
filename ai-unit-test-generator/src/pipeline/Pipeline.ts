@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { EventEmitter } from 'events';
 import { PythonBridge } from '../services/PythonBridge';
-import { OllamaService } from '../services/OllamaService';
+import { LLMService } from '../services/LLMService';
 import { ConfigService } from '../services/ConfigService';
 import {
     ExtractedFunction,
@@ -22,17 +22,17 @@ import { Logger } from '../utils/logger';
 export class Pipeline extends EventEmitter {
     private state: PipelineState = 'idle';
     private pythonBridge: PythonBridge;
-    private ollamaService: OllamaService;
+    private llmService: LLMService;
     private configService: ConfigService;
 
     constructor(
         pythonBridge: PythonBridge,
-        ollamaService: OllamaService,
+        llmService: LLMService,
         configService: ConfigService
     ) {
         super();
         this.pythonBridge = pythonBridge;
-        this.ollamaService = ollamaService;
+        this.llmService = llmService;
         this.configService = configService;
     }
 
@@ -93,15 +93,15 @@ export class Pipeline extends EventEmitter {
             throw new Error('No functions selected');
         }
 
-        const health = await this.ollamaService.checkHealth();
+        const health = await this.llmService.checkHealth();
         if (health.status !== 'ok') {
-            throw new Error(`Ollama is not available: ${health.error}`);
+            throw new Error(`LLM provider is not available: ${health.error}`);
         }
 
-        const modelAvailable = await this.ollamaService.isModelAvailable();
+        const modelAvailable = await this.llmService.isModelAvailable();
         if (!modelAvailable) {
-            const model = this.configService.getOllamaModel();
-            throw new Error(`Model ${model} is not available in Ollama`);
+            const model = this.llmService.getModel();
+            throw new Error(`Model ${model} is not available`);
         }
 
         let completedScenarios = 0;

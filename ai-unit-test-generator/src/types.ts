@@ -71,6 +71,10 @@ export interface OllamaHealthResponse {
 }
 
 export interface ExtensionConfig {
+    llmProvider: 'openai' | 'ollama';
+    openaiApiKey: string;
+    openaiModel: string;
+    openaiOrganization: string;
     ollamaEndpoint: string;
     ollamaModel: string;
     testOutputDir: string;
@@ -78,7 +82,7 @@ export interface ExtensionConfig {
 }
 
 export interface WebviewMessage {
-    type: 'generate' | 'extract' | 'clear' | 'checkOllama' | 'getStatus' | 'runCoverage';
+    type: 'generate' | 'extract' | 'clear' | 'checkOllama' | 'getStatus' | 'runCoverage' | 'switchProvider' | 'switchModel';
     payload?: unknown;
 }
 

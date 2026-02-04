@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Pipeline } from '../pipeline/Pipeline';
-import { OllamaService } from '../services/OllamaService';
+import { LLMService } from '../services/LLMService';
+import { ConfigService } from '../services/ConfigService';
 import { FileTreeProvider } from './FileTreeProvider';
 import { FunctionTreeProvider } from './FunctionTreeProvider';
 import { PipelineStatus, WebviewMessage } from '../types';
@@ -12,7 +13,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     constructor(
         private readonly extensionUri: vscode.Uri,
         private readonly pipeline: Pipeline,
-        private readonly ollamaService: OllamaService,
+        private readonly llmService: LLMService,
+        private readonly configService: ConfigService,
         private readonly fileTreeProvider: FileTreeProvider,
         private readonly functionTreeProvider: FunctionTreeProvider
     ) {}
@@ -36,7 +38,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
             switch (message.type) {
                 case 'checkOllama':
-                    await this.checkOllamaStatus();
+                    await this.checkLLMStatus();
                     break;
                 case 'extract':
                     await vscode.commands.executeCommand('aiUnitTesting.extractFunctions');
@@ -53,10 +55,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 case 'runCoverage':
                     await vscode.commands.executeCommand('aiUnitTesting.runCoverage');
                     break;
+                case 'switchProvider':
+                    await this.switchProvider(message.payload as string);
+                    break;
+                case 'switchModel':
+                    await this.switchModel(message.payload as string);
+                    break;
             }
         });
 
-        this.checkOllamaStatus();
+        this.checkLLMStatus();
         this.sendStats();
     }
 
@@ -71,15 +79,56 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private async checkOllamaStatus(): Promise<void> {
+    private async switchProvider(provider: string): Promise<void> {
+        if (provider !== 'openai' && provider !== 'ollama') {
+            return;
+        }
+
+        try {
+            await this.configService.updateConfig('llmProvider', provider);
+            vscode.window.showInformationMessage(`Switched to ${provider === 'openai' ? 'OpenAI' : 'Ollama'} provider`);
+            await this.checkLLMStatus();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            vscode.window.showErrorMessage(`Failed to switch provider: ${message}`);
+        }
+    }
+
+    private async switchModel(model: string): Promise<void> {
+        if (!model) {
+            return;
+        }
+
+        try {
+            const provider = this.configService.getLLMProvider();
+            const configKey = provider === 'openai' ? 'openaiModel' : 'ollamaModel';
+            await this.configService.updateConfig(configKey, model);
+            vscode.window.showInformationMessage(`Switched to model: ${model}`);
+            await this.checkLLMStatus();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            vscode.window.showErrorMessage(`Failed to switch model: ${message}`);
+        }
+    }
+
+    private async checkLLMStatus(): Promise<void> {
         if (!this._view) {
             return;
         }
 
-        const health = await this.ollamaService.checkHealth();
+        const provider = this.configService.getLLMProvider();
+        const currentModel = provider === 'openai'
+            ? this.configService.getOpenAIModel()
+            : this.configService.getOllamaModel();
+        const health = await this.llmService.checkHealth();
+
         this._view.webview.postMessage({
             type: 'ollamaStatus',
-            payload: health
+            payload: {
+                ...health,
+                provider,
+                currentModel
+            }
         });
     }
 
@@ -116,10 +165,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 <body>
     <div class="container">
         <div class="section">
-            <div class="section-title">Ollama Status</div>
-            <div id="ollamaStatus" class="ollama-status disconnected">
-                <span id="ollamaIcon">⊘</span>
-                <span id="ollamaText">Checking...</span>
+            <div class="section-title">LLM Settings</div>
+            <div class="llm-settings">
+                <div class="setting-group">
+                    <label for="providerSelect">Provider:</label>
+                    <select id="providerSelect" class="select-input">
+                        <option value="ollama">Ollama</option>
+                        <option value="openai">OpenAI</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="modelSelect">Model:</label>
+                    <select id="modelSelect" class="select-input">
+                        <option value="">Loading models...</option>
+                    </select>
+                </div>
+                <div id="llmStatus" class="llm-status disconnected">
+                    <span id="llmIcon">⊘</span>
+                    <span id="llmText">Checking...</span>
+                </div>
             </div>
         </div>
 
@@ -188,9 +252,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const vscode = acquireVsCodeApi();
 
         const elements = {
-            ollamaStatus: document.getElementById('ollamaStatus'),
-            ollamaIcon: document.getElementById('ollamaIcon'),
-            ollamaText: document.getElementById('ollamaText'),
+            providerSelect: document.getElementById('providerSelect'),
+            modelSelect: document.getElementById('modelSelect'),
+            llmStatus: document.getElementById('llmStatus'),
+            llmIcon: document.getElementById('llmIcon'),
+            llmText: document.getElementById('llmText'),
             statusDot: document.getElementById('statusDot'),
             statusText: document.getElementById('statusText'),
             progressBar: document.getElementById('progressBar'),
@@ -203,6 +269,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             errorSection: document.getElementById('errorSection'),
             errorMessage: document.getElementById('errorMessage')
         };
+
+        // Provider selector handler
+        elements.providerSelect.addEventListener('change', (e) => {
+            const provider = e.target.value;
+            vscode.postMessage({ type: 'switchProvider', payload: provider });
+        });
+
+        // Model selector handler
+        elements.modelSelect.addEventListener('change', (e) => {
+            const model = e.target.value;
+            if (model) {
+                vscode.postMessage({ type: 'switchModel', payload: model });
+            }
+        });
 
         // Button handlers
         elements.extractBtn.addEventListener('click', () => {
@@ -242,14 +322,37 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         });
 
         function updateOllamaStatus(health) {
-            if (health.status === 'ok') {
-                elements.ollamaStatus.className = 'ollama-status connected';
-                elements.ollamaIcon.textContent = '✓';
-                elements.ollamaText.textContent = 'Connected (' + (health.models?.length || 0) + ' models)';
+            // Update provider select
+            if (health.provider) {
+                elements.providerSelect.value = health.provider;
+            }
+
+            // Update model select
+            if (health.models && health.models.length > 0) {
+                elements.modelSelect.innerHTML = '';
+                health.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model;
+                    option.textContent = model;
+                    if (model === health.currentModel) {
+                        option.selected = true;
+                    }
+                    elements.modelSelect.appendChild(option);
+                });
             } else {
-                elements.ollamaStatus.className = 'ollama-status disconnected';
-                elements.ollamaIcon.textContent = '⊘';
-                elements.ollamaText.textContent = health.error || 'Disconnected';
+                elements.modelSelect.innerHTML = '<option value="">No models available</option>';
+            }
+
+            // Update status indicator
+            if (health.status === 'ok') {
+                elements.llmStatus.className = 'llm-status connected';
+                elements.llmIcon.textContent = '✓';
+                const providerName = health.provider === 'openai' ? 'OpenAI' : 'Ollama';
+                elements.llmText.textContent = providerName + ' (' + (health.models?.length || 0) + ' models)';
+            } else {
+                elements.llmStatus.className = 'llm-status disconnected';
+                elements.llmIcon.textContent = '⊘';
+                elements.llmText.textContent = health.error || 'Disconnected';
             }
         }
 
