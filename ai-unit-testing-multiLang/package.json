@@ -1,0 +1,46 @@
+{
+  "name": "ai-unit-testing",
+  "displayName": "AI Unit Testing",
+  "description": "AI-powered unit test generation inside VS Code",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.107.0"
+  },
+  "categories": ["Other"],
+
+  "main": "./out/extension.js",
+
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aiUnitTesting",
+          "title": "AI Unit Testing",
+          "icon": "media/icon.png"
+        }
+      ]
+    },
+    "views": {
+      "aiUnitTesting": [
+        {
+          "id": "aiUnitTestingView",
+          "name": "AI Test Generator",
+          "type": "webview",
+          "icon": "media/icon.png"
+        }
+      ]
+    }
+  },
+
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+
+  "devDependencies": {
+    "@types/vscode": "^1.107.0",
+    "@types/node": "22.x",
+    "typescript": "^5.9.3"
+  }
+}
